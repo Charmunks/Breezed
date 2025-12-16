@@ -1,10 +1,11 @@
-const path = require('path');
-const crypto = require('crypto');
-const getPort = require('get-port');
-const Docker = require('dockerode');
+
+import crypto from 'crypto';
+import getPort from 'get-port';
+import Docker from 'dockerode';
+import { fileURLToPath } from 'url';
 
 const docker = new Docker();
-const dockerfilePath = path.join(__dirname, '..', 'container');
+const dockerfilePath = fileURLToPath(new URL('../container', import.meta.url));
 const imageName = 'breezed-ssh';
 
 function generatePassword(length = 16) {
@@ -87,7 +88,7 @@ async function listContainers() {
     }));
 }
 
-module.exports = {
+export {
     createContainer,
     startContainer,
     stopContainer,

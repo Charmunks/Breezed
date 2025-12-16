@@ -1,10 +1,12 @@
-const express = require("express");
+import "dotenv/config";
+import express from "express";
+import containerRouter from "./routes/container.js";
+
 const app = express();
 
 app.use(express.json());
 
-app.use("/", require("./routes/container"));
-
+app.use("/", containerRouter);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
