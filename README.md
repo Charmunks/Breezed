@@ -1,4 +1,9 @@
+<div align="center">
+
 # Breezed
+![Breezed Badge](https://hackatime-badge.hackclub.com/U07UV4R2G4T/breezed)
+
+</div>
 
 Breezed is a CLI tool to quickly spin up and manage VPS's. Perfect for quick testing/iteration, rapid deployment, and people who are just at home in the terminal. 100% selfhostable and compatible with any existing hosting providers.
 
