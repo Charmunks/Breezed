@@ -95,6 +95,11 @@ async function updateLastLogin(userId) {
         .update({ last_login: new Date() });
 }
 
+async function isAdmin(userId) {
+    const user = await db('users').where({ user_id: userId }).first();
+    return user?.admin === true;
+}
+
 export {
     createOtp,
     verifyOtp,
@@ -102,5 +107,6 @@ export {
     verifyAuthToken,
     invalidateAuthToken,
     getOrCreateUser,
-    updateLastLogin
+    updateLastLogin,
+    isAdmin
 };

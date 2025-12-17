@@ -4,6 +4,7 @@ import getPort from 'get-port';
 import Docker from 'dockerode';
 import { fileURLToPath } from 'url';
 import db from './db.util.js';
+import { isAdmin } from './auth.util.js';
 
 const docker = new Docker();
 const dockerfilePath = fileURLToPath(new URL('../container', import.meta.url));
@@ -15,6 +16,17 @@ function generatePassword(length = 16) {
 
 function formatContainerName(userId, name) {
     return `${userId}-${name}`;
+}
+
+async function resolveTargetUserId(requesterId, targetUserId) {
+    if (targetUserId && targetUserId !== requesterId) {
+        const admin = await isAdmin(requesterId);
+        if (!admin) {
+            throw new Error('Permission denied. Only admins can manage other users\' containers.');
+        }
+        return targetUserId;
+    }
+    return requesterId;
 }
 
 async function containerExists(fullName) {
@@ -44,11 +56,36 @@ async function ensureImage() {
     }
 }
 
+async function getUserLimits(userId) {
+    const user = await db('users').where({ user_id: userId }).first();
+    return {
+        maxContainers: user?.max_containers ?? 5,
+        maxActiveContainers: user?.max_active_containers ?? 1
+    };
+}
+
+async function getActiveContainerCount(userId) {
+    const containers = await db('containers').where({ user_id: userId, sleeping: false });
+    return containers.length;
+}
+
 async function createContainer(name, userId) {
     const fullName = formatContainerName(userId, name);
     
     if (await containerExists(fullName)) {
         throw new Error(`Container with name "${name}" already exists`);
+    }
+    
+    const userContainers = await db('containers').where({ user_id: userId });
+    const limits = await getUserLimits(userId);
+    
+    if (userContainers.length >= limits.maxContainers) {
+        throw new Error(`Container limit reached. You can only have ${limits.maxContainers} containers.`);
+    }
+    
+    const activeCount = await getActiveContainerCount(userId);
+    if (activeCount >= limits.maxActiveContainers) {
+        throw new Error(`Active container limit reached. You can only have ${limits.maxActiveContainers} active container(s).`);
     }
     
     const password = generatePassword();
@@ -82,32 +119,49 @@ async function createContainer(name, userId) {
     };
 }
 
-async function startContainer(name, userId) {
-    const fullName = formatContainerName(userId, name);
+async function startContainer(name, requesterId, targetUserId = null) {
+    const ownerId = await resolveTargetUserId(requesterId, targetUserId);
+    const fullName = formatContainerName(ownerId, name);
+    
+    const containerRecord = await db('containers').where({ name: fullName }).first();
+    if (containerRecord && !containerRecord.sleeping) {
+        return name;
+    }
+    
+    const limits = await getUserLimits(ownerId);
+    const activeCount = await getActiveContainerCount(ownerId);
+    
+    if (activeCount >= limits.maxActiveContainers) {
+        throw new Error(`Active container limit reached. You can only have ${limits.maxActiveContainers} active container(s).`);
+    }
+    
     const container = docker.getContainer(fullName);
     await container.start();
     await db('containers').where({ name: fullName }).update({ sleeping: false, last_started_at: new Date() });
     return name;
 }
 
-async function stopContainer(name, userId) {
-    const fullName = formatContainerName(userId, name);
+async function stopContainer(name, requesterId, targetUserId = null) {
+    const ownerId = await resolveTargetUserId(requesterId, targetUserId);
+    const fullName = formatContainerName(ownerId, name);
     const container = docker.getContainer(fullName);
     await container.stop();
     await db('containers').where({ name: fullName }).update({ sleeping: true });
     return name;
 }
 
-async function removeContainer(name, userId) {
-    const fullName = formatContainerName(userId, name);
+async function removeContainer(name, requesterId, targetUserId = null) {
+    const ownerId = await resolveTargetUserId(requesterId, targetUserId);
+    const fullName = formatContainerName(ownerId, name);
     const container = docker.getContainer(fullName);
     await container.remove({ force: true });
     await db('containers').where({ name: fullName }).del();
     return name;
 }
 
-async function getContainerStatus(name, userId) {
-    const fullName = formatContainerName(userId, name);
+async function getContainerStatus(name, requesterId, targetUserId = null) {
+    const ownerId = await resolveTargetUserId(requesterId, targetUserId);
+    const fullName = formatContainerName(ownerId, name);
     const container = docker.getContainer(fullName);
     const info = await container.inspect();
     return info.State.Status;
@@ -117,8 +171,9 @@ async function listContainers() {
     return db('containers').select('*');
 }
 
-async function getContainerByName(name, userId) {
-    const fullName = formatContainerName(userId, name);
+async function getContainerByName(name, requesterId, targetUserId = null) {
+    const ownerId = await resolveTargetUserId(requesterId, targetUserId);
+    const fullName = formatContainerName(ownerId, name);
     return db('containers').where({ name: fullName }).first();
 }
 
