@@ -1,5 +1,5 @@
 import express from "express";
-import { createContainer } from "../utils/containers.util.js";
+import { createContainer, startContainer, stopContainer, removeContainer } from "../utils/containers.util.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
@@ -18,6 +18,54 @@ router.post("/create", requireAuth, async (req, res) => {
       return res.status(409).json({ error: err.message });
     }
     return res.status(500).json({ error: "Failed to create container" });
+  }
+});
+
+router.post("/start", requireAuth, async (req, res) => {
+  const { name } = req.body;
+  const userId = req.user.user_id;
+  try {
+    await startContainer(name, userId);
+    res.json({ message: `Container "${name}" started` });
+  } catch (err) {
+    if (err.statusCode === 404) {
+      return res.status(404).json({ error: "Container not found" });
+    }
+    if (err.statusCode === 304) {
+      return res.status(304).json({ error: "Container already running" });
+    }
+    return res.status(500).json({ error: "Failed to start container" });
+  }
+});
+
+router.post("/stop", requireAuth, async (req, res) => {
+  const { name } = req.body;
+  const userId = req.user.user_id;
+  try {
+    await stopContainer(name, userId);
+    res.json({ message: `Container "${name}" stopped` });
+  } catch (err) {
+    if (err.statusCode === 404) {
+      return res.status(404).json({ error: "Container not found" });
+    }
+    if (err.statusCode === 304) {
+      return res.status(304).json({ error: "Container already stopped" });
+    }
+    return res.status(500).json({ error: "Failed to stop container" });
+  }
+});
+
+router.delete("/remove", requireAuth, async (req, res) => {
+  const { name } = req.body;
+  const userId = req.user.user_id;
+  try {
+    await removeContainer(name, userId);
+    res.json({ message: `Container "${name}" removed` });
+  } catch (err) {
+    if (err.statusCode === 404) {
+      return res.status(404).json({ error: "Container not found" });
+    }
+    return res.status(500).json({ error: "Failed to remove container" });
   }
 });
 
