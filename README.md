@@ -7,6 +7,17 @@
 
 Breezed is a CLI tool to quickly spin up and manage VPS's. Perfect for quick testing/iteration, rapid deployment, and people who are just at home in the terminal. 100% selfhostable and compatible with any existing hosting providers.
 
+## Deploying (server)
+
+```bash
+git clone https://github.com/Charmunks/Breezed
+cd server
+cp .env.example .env # Fill out the .env
+npm install
+npx knex migrate:latest
+npm run dev # Or npm run start for prod
+```
+
 ## Tech Stack
 
 - ExpressJS backend (/server)
@@ -21,6 +32,7 @@ Breezed is a CLI tool to quickly spin up and manage VPS's. Perfect for quick tes
 - All route files in /routes
 - All util files in /utils
 - Docker container being used is in /container/Dockerfile
+- Database migrations in /migrations
 - All util files end in .util.js
 
 ### Client

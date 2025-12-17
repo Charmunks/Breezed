@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import getPort from 'get-port';
 import Docker from 'dockerode';
 import { fileURLToPath } from 'url';
+import db from './db.util.js';
 
 const docker = new Docker();
 const dockerfilePath = fileURLToPath(new URL('../container', import.meta.url));
@@ -28,7 +29,7 @@ async function ensureImage() {
     }
 }
 
-async function createContainer(name) {
+async function createContainer(name, ip) {
     const password = generatePassword();
     const hostPort = await getPort();
     await ensureImage();
@@ -44,6 +45,14 @@ async function createContainer(name) {
     });
     await container.start();
     
+    await db('containers').insert({
+        container_id: container.id,
+        name,
+        password,
+        port: hostPort,
+        creator_ip: ip
+    });
+    
     return {
         id: container.id,
         name,
@@ -55,18 +64,21 @@ async function createContainer(name) {
 async function startContainer(name) {
     const container = docker.getContainer(name);
     await container.start();
+    await db('containers').where({ name }).update({ sleeping: false, last_started_at: new Date() });
     return name;
 }
 
 async function stopContainer(name) {
     const container = docker.getContainer(name);
     await container.stop();
+    await db('containers').where({ name }).update({ sleeping: true });
     return name;
 }
 
 async function removeContainer(name) {
     const container = docker.getContainer(name);
     await container.remove({ force: true });
+    await db('containers').where({ name }).del();
     return name;
 }
 
@@ -77,15 +89,15 @@ async function getContainerStatus(name) {
 }
 
 async function listContainers() {
-    const containers = await docker.listContainers({
-        all: true,
-        filters: { ancestor: [imageName] }
-    });
-    return containers.map(c => ({
-        name: c.Names[0].replace(/^\//, ''),
-        status: c.Status,
-        ports: c.Ports.map(p => `${p.PublicPort}:${p.PrivatePort}`).join(', ')
-    }));
+    return db('containers').select('*');
+}
+
+async function getContainerByName(name) {
+    return db('containers').where({ name }).first();
+}
+
+async function getContainersByIp(creatorIp) {
+    return db('containers').where({ creator_ip: creatorIp });
 }
 
 export {
@@ -94,5 +106,7 @@ export {
     stopContainer,
     removeContainer,
     getContainerStatus,
-    listContainers
+    listContainers,
+    getContainerByName,
+    getContainersByIp
 };

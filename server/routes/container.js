@@ -7,7 +7,7 @@ const host = process.env.HOST;
 router.post("/create", async (req, res) => {
   const { name } = req.body;
   const ip = req.ip;
-  const container = await createContainer(name);
+  const container = await createContainer(name, ip);
   const port = container.port
   const pass = container.password
   res.json({"url":host, "port":port, "password": pass})
