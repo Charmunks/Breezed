@@ -5,7 +5,22 @@
 ![Hackatime Badge](https://hackatime-badge.hackclub.com/U07UV4R2G4T/breezed) ![Hack Club Badge](https://img.shields.io/badge/Hack%20Club-EC3750?logo=Hack%20Club&logoColor=white) ![NPM](https://img.shields.io/badge/NPM-%23CB3837.svg?logo=npm&logoColor=white)
 </div>
 
-Breezed is a CLI tool to quickly spin up and manage remote VPS's. Perfect for quick testing/iteration, rapid deployment, and people who are at home in the terminal. 100% selfhostable and compatible with any existing hosting providers.
+Breezed is a CLI tool to quickly spin up and manage remote VPSes.
+
+Breezed has two main parts:
+
+- Server: Provides an API for creating and managing Breezed containers, which are modified debian slim containers, with ssh server pre-installed and set up.
+
+- Client: CLI tool for interacting with the API. Allows you to quickly spin up Breeze dcontainers and manage them.
+
+## Installation (client)
+
+```bash
+git clone https://github.com/Charmunks/Breezed
+cd client
+npm i
+npm link
+```
 
 ## Deploying (server)
 
@@ -35,6 +50,8 @@ npm run dev # Or npm run start for prod
 - Database migrations in /migrations
 - All middleware in /middleware
 
-### Client
+### Client (/client)
 
-Coming soon
+- Main script in cli.js
+- Commands in /commands
+- Utils in /utils
