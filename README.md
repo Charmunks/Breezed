@@ -2,7 +2,7 @@
 
 # Breezed
 
-![Hackatime Badge](https://hackatime-badge.hackclub.com/U07UV4R2G4T/breezed) ![Hack Club Badge](https://img.shields.io/badge/Hack%20Club-EC3750?logo=Hack%20Club&logoColor=white) ![NPM](https://img.shields.io/badge/NPM-%23CB3837.svg?logo=npm&logoColor=white)
+[![Hackatime Badge](https://hackatime-badge.hackclub.com/U07UV4R2G4T/breezed)](https://hackatime.hackclub.com/) [![Hack Club Badge](https://img.shields.io/badge/Hack%20Club-EC3750?logo=Hack%20Club&logoColor=white)](https://hackclub.com/) [![NPM](https://img.shields.io/badge/NPM-%23CB3837.svg?logo=npm&logoColor=white)](https://www.npmjs.com/package/breezed)
 </div>
 
 Breezed is a CLI tool to quickly spin up and manage remote VPSes.
