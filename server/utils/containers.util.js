@@ -29,7 +29,7 @@ async function ensureImage() {
     }
 }
 
-async function createContainer(name, ip) {
+async function createContainer(name, userId) {
     const password = generatePassword();
     const hostPort = await getPort();
     await ensureImage();
@@ -50,7 +50,7 @@ async function createContainer(name, ip) {
         name,
         password,
         port: hostPort,
-        creator_ip: ip
+        user_id: userId
     });
     
     return {
@@ -96,8 +96,8 @@ async function getContainerByName(name) {
     return db('containers').where({ name }).first();
 }
 
-async function getContainersByIp(creatorIp) {
-    return db('containers').where({ creator_ip: creatorIp });
+async function getContainersByUserId(userId) {
+    return db('containers').where({ user_id: userId });
 }
 
 export {
@@ -108,5 +108,5 @@ export {
     getContainerStatus,
     listContainers,
     getContainerByName,
-    getContainersByIp
+    getContainersByUserId
 };
