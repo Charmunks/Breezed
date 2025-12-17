@@ -13,6 +13,21 @@ function generatePassword(length = 16) {
     return crypto.randomBytes(length).toString('hex').slice(0, length);
 }
 
+function formatContainerName(userId, name) {
+    return `${userId}-${name}`;
+}
+
+async function containerExists(fullName) {
+    try {
+        const container = docker.getContainer(fullName);
+        await container.inspect();
+        return true;
+    } catch (err) {
+        if (err.statusCode === 404) return false;
+        throw err;
+    }
+}
+
 async function ensureImage() {
     const images = await docker.listImages({ filters: { reference: [imageName] } });
     if (images.length === 0) {
@@ -30,13 +45,19 @@ async function ensureImage() {
 }
 
 async function createContainer(name, userId) {
+    const fullName = formatContainerName(userId, name);
+    
+    if (await containerExists(fullName)) {
+        throw new Error(`Container with name "${name}" already exists`);
+    }
+    
     const password = generatePassword();
     const hostPort = await getPort();
     await ensureImage();
     
     const container = await docker.createContainer({
         Image: imageName,
-        name,
+        name: fullName,
         Env: [`SSH_PASSWORD=${password}`],
         ExposedPorts: { '22/tcp': {} },
         HostConfig: {
@@ -47,7 +68,7 @@ async function createContainer(name, userId) {
     
     await db('containers').insert({
         container_id: container.id,
-        name,
+        name: fullName,
         password,
         port: hostPort,
         user_id: userId
@@ -61,29 +82,33 @@ async function createContainer(name, userId) {
     };
 }
 
-async function startContainer(name) {
-    const container = docker.getContainer(name);
+async function startContainer(name, userId) {
+    const fullName = formatContainerName(userId, name);
+    const container = docker.getContainer(fullName);
     await container.start();
-    await db('containers').where({ name }).update({ sleeping: false, last_started_at: new Date() });
+    await db('containers').where({ name: fullName }).update({ sleeping: false, last_started_at: new Date() });
     return name;
 }
 
-async function stopContainer(name) {
-    const container = docker.getContainer(name);
+async function stopContainer(name, userId) {
+    const fullName = formatContainerName(userId, name);
+    const container = docker.getContainer(fullName);
     await container.stop();
-    await db('containers').where({ name }).update({ sleeping: true });
+    await db('containers').where({ name: fullName }).update({ sleeping: true });
     return name;
 }
 
-async function removeContainer(name) {
-    const container = docker.getContainer(name);
+async function removeContainer(name, userId) {
+    const fullName = formatContainerName(userId, name);
+    const container = docker.getContainer(fullName);
     await container.remove({ force: true });
-    await db('containers').where({ name }).del();
+    await db('containers').where({ name: fullName }).del();
     return name;
 }
 
-async function getContainerStatus(name) {
-    const container = docker.getContainer(name);
+async function getContainerStatus(name, userId) {
+    const fullName = formatContainerName(userId, name);
+    const container = docker.getContainer(fullName);
     const info = await container.inspect();
     return info.State.Status;
 }
@@ -92,8 +117,9 @@ async function listContainers() {
     return db('containers').select('*');
 }
 
-async function getContainerByName(name) {
-    return db('containers').where({ name }).first();
+async function getContainerByName(name, userId) {
+    const fullName = formatContainerName(userId, name);
+    return db('containers').where({ name: fullName }).first();
 }
 
 async function getContainersByUserId(userId) {
